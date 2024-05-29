@@ -3,7 +3,7 @@ const { Server } = require('socket.io');
 const http = require('http');
 const path = require('path');
 const { v4: uuidv4 } = require('uuid');
-const { readDataFromFile, writeDataToFile } = require('../../utils');
+const { readDataFromFile, writeDataToFile } = require('./utils');
 
 const app = express();
 const server = http.createServer(app);
@@ -23,11 +23,11 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // Rutas para productos
-const productsRouter = require('./routes/products');
+const productsRouter = require('./ecommerce-server/coder-backend/routes/products');
 app.use('/api/products', productsRouter);
 
 // Rutas para carritos
-const cartsRouter = require('./routes/carts');
+const cartsRouter = require('./ecommerce-server/coder-backend/routes/carts');
 app.use('/api/carts', cartsRouter);
 
 // Ruta para la vista home
