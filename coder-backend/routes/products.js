@@ -1,63 +1,84 @@
 const express = require('express');
-const { v4: uuidv4 } = require('uuid');
-const path = require('path');
-const { readDataFromFile, writeDataToFile } = require('../../../utils');
-
+const Product = require('../models/Product');
 const router = express.Router();
-const productsFilePath = path.join(__dirname, '..', 'data', 'products.json');
+const { io } = require('../server');
 
-// Ruta raíz GET /api/products/
-router.get('/', (req, res) => {
-    const products = readDataFromFile(productsFilePath);
-    const limit = req.query.limit ? parseInt(req.query.limit) : products.length;
-    res.json(products.slice(0, limit));
+// GET all products with pagination and filters
+router.get('/', async (req, res) => {
+    try {
+        const { limit = 10, page = 1, sort, query } = req.query;
+        const options = {
+            limit: parseInt(limit),
+            page: parseInt(page),
+            sort: sort === 'asc' ? { price: 1 } : sort === 'desc' ? { price: -1 } : {}
+        };
+        const filter = query ? { $or: [{ category: query }, { status: query === 'true' }] } : {};
+
+        const products = await Product.paginate(filter, options);
+
+        const response = {
+            status: 'success',
+            payload: products.docs,
+            totalPages: products.totalPages,
+            prevPage: products.hasPrevPage ? page - 1 : null,
+            nextPage: products.hasNextPage ? page + 1 : null,
+            page: products.page,
+            hasPrevPage: products.hasPrevPage,
+            hasNextPage: products.hasNextPage,
+            prevLink: products.hasPrevPage ? `/api/products?limit=${limit}&page=${page - 1}&sort=${sort}&query=${query}` : null,
+            nextLink: products.hasNextPage ? `/api/products?limit=${limit}&page=${page + 1}&sort=${sort}&query=${query}` : null
+        };
+
+        res.json(response);
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
 });
 
-// Ruta GET /api/products/:pid
-router.get('/:pid', (req, res) => {
-    const productId = req.params.pid;
-    const products = readDataFromFile(productsFilePath);
-    const product = products.find(p => p.id === productId);
-    if (product) {
+// GET product by id
+router.get('/:pid', async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.pid);
+        if (!product) return res.status(404).json({ status: 'error', message: 'Product not found' });
         res.json(product);
-    } else {
-        res.status(404).send('Producto no encontrado');
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
     }
 });
 
-// Ruta POST /api/products/
-router.post('/', (req, res) => {
-    const newProduct = req.body;
-    newProduct.id = uuidv4(); // Generamos un ID único para el nuevo producto
-    const products = readDataFromFile(productsFilePath);
-    products.push(newProduct);
-    writeDataToFile(productsFilePath, products);
-    res.status(201).send('Producto agregado correctamente');
-});
-
-// Ruta PUT /api/products/:pid
-router.put('/:pid', (req, res) => {
-    const productId = req.params.pid;
-    const updatedProduct = req.body;
-    const products = readDataFromFile(productsFilePath);
-    const productIndex = products.findIndex(p => p.id === productId);
-    if (productIndex !== -1) {
-        updatedProduct.id = productId; // Aseguramos que el ID no se actualice
-        products[productIndex] = updatedProduct;
-        writeDataToFile(productsFilePath, products);
-        res.send('Producto actualizado correctamente');
-    } else {
-        res.status(404).send('Producto no encontrado');
+// POST new product
+router.post('/', async (req, res) => {
+    try {
+        const newProduct = new Product(req.body);
+        await newProduct.save();
+        io.emit('newProduct', newProduct);
+        res.status(201).json({ status: 'success', message: 'Product added', product: newProduct });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
     }
 });
 
-// Ruta DELETE /api/products/:pid
-router.delete('/:pid', (req, res) => {
-    const productId = req.params.pid;
-    let products = readDataFromFile(productsFilePath);
-    products = products.filter(p => p.id !== productId);
-    writeDataToFile(productsFilePath, products);
-    res.send('Producto eliminado correctamente');
+// PUT update product by id
+router.put('/:pid', async (req, res) => {
+    try {
+        const updatedProduct = await Product.findByIdAndUpdate(req.params.pid, req.body, { new: true });
+        if (!updatedProduct) return res.status(404).json({ status: 'error', message: 'Product not found' });
+        res.json({ status: 'success', message: 'Product updated', product: updatedProduct });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
+});
+
+// DELETE product by id
+router.delete('/:pid', async (req, res) => {
+    try {
+        const deletedProduct = await Product.findByIdAndDelete(req.params.pid);
+        if (!deletedProduct) return res.status(404).json({ status: 'error', message: 'Product not found' });
+        io.emit('deleteProduct', deletedProduct);
+        res.json({ status: 'success', message: 'Product deleted', product: deletedProduct });
+    } catch (error) {
+        res.status(500).json({ status: 'error', message: error.message });
+    }
 });
 
 module.exports = router;

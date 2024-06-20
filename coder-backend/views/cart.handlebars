@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Products</title>
+    <title>Cart</title>
 </head>
 <body>
-    <h1>Products</h1>
+    <h1>Cart</h1>
     <ul>
-        {{#each products}}
-            <li>{{this.title}} - {{this.price}}</li>
+        {{#each cart.products}}
+            <li>{{this.product.title}} - {{this.quantity}}</li>
         {{/each}}
     </ul>
 </body>

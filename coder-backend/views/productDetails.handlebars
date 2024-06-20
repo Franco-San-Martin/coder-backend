@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{product.title}}</title>
+</head>
+<body>
+    <h1>{{product.title}}</h1>
+    <p>{{product.description}}</p>
+    <p>Price: {{product.price}}</p>
+    <p>Category: {{product.category}}</p>
+    <button onclick="addToCart('{{product._id}}')">Add to Cart</button>
+    <script>
+        function addToCart(productId) {
+            fetch(`/api/carts/:cid/products/${productId}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('Product added to cart');
+                    } else {
+                        alert('Failed to add product to cart');
+                    }
+                });
+        }
+    </script>
+</body>
+</html>

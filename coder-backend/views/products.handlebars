@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Products</title>
+</head>
+<body>
+    <h1>Products</h1>
+    <ul>
+        {{#each products}}
+            <li>
+                <a href="/products/{{this._id}}">{{this.title}}</a> - {{this.price}}
+                <button onclick="addToCart('{{this._id}}')">Add to Cart</button>
+            </li>
+        {{/each}}
+    </ul>
+    <div>
+        {{#if hasPrevPage}}
+            <a href="{{prevLink}}">Previous</a>
+        {{/if}}
+        Page {{page}} of {{totalPages}}
+        {{#if hasNextPage}}
+            <a href="{{nextLink}}">Next</a>
+        {{/if}}
+    </div>
+    <script>
+        function addToCart(productId) {
+            fetch(`/api/carts/:cid/products/${productId}`, { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success') {
+                        alert('Product added to cart');
+                    } else {
+                        alert('Failed to add product to cart');
+                    }
+                });
+        }
+    </script>
+</body>
+</html>
